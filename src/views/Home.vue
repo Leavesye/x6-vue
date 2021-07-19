@@ -5,6 +5,8 @@
         <li @mousedown="handleStartDrag" data-table="holiday">holiday</li>
         <li @mousedown="handleStartDrag" data-table="Calendar">Calendar</li>
         <li @mousedown="handleStartDrag" data-table="Document">Document</li>
+        <li @mousedown="handleStartDrag" data-table="join">关联</li>
+        <li @mousedown="handleStartDrag" data-table="change">转换输出</li>
       </ul>
     </div>
     <div class="graph-main">
@@ -19,6 +21,7 @@
         <li @click="handleDelete">删除</li>
         <li @click="handleClear">清空</li>
         <li @click="handleAutoLayout">自动排布</li>
+        <li @click="handleExportData">导出画布数据</li>
       </ul>
       <!-- 画布容器 -->
       <div id="graph-container"></div>
@@ -29,8 +32,9 @@
 <script>
 import { Graph, Addon } from "@antv/x6";
 import { GridLayout } from "@antv/layout";
+import "@antv/x6-vue-shape";
 import { config, NodeFactory } from "./graph-utils";
-import '@antv/x6-vue-shape'
+import FieldList from "./graph-utils/field-list";
 
 const { Dnd } = Addon;
 export default {
@@ -44,9 +48,20 @@ export default {
     handleStartDrag(e) {
       const target = e.currentTarget;
       const tableName = target.getAttribute("data-table");
-      const node = this.graph.createNode(
-        NodeFactory.createTableNode({ tableName })
-      );
+      let node = null;
+      if (tableName == "join") {
+        node = this.graph.createNode(
+          NodeFactory.createJoinNode({ tableName })
+        );
+      } else if (tableName == "change") {
+        node = this.graph.createNode(
+          NodeFactory.createOutputNode({ tableName })
+        );
+      } else {
+        node = this.graph.createNode(
+          NodeFactory.createTableNode({ tableName })
+        );
+      }
       this.dnd.start(node, e);
     },
     // 撤销
@@ -83,7 +98,7 @@ export default {
     // 粘贴
     handlePaste() {
       if (!this.graph.isClipboardEmpty()) {
-        const cells = this.graph.paste({ offset: 32 });
+        const cells = this.graph.paste({ offset: 20 });
         this.graph.cleanSelection();
         this.graph.select(cells);
       }
@@ -107,7 +122,7 @@ export default {
       const gridLayout = new GridLayout({
         type: "grid",
         width: 800,
-        height: 400,
+        height: 800,
         center: [300, 200],
         rows: 4,
         cols: 4,
@@ -118,7 +133,7 @@ export default {
       };
       const data = this.graph.toJSON();
       if (data.cells && data.cells.length) {
-        console.log(data.cells, "cells");
+        console.log(data, data.cells, "cells");
         data.cells.forEach((item) => {
           if (item.shape !== "edge") {
             model.nodes.push({
@@ -128,6 +143,7 @@ export default {
               height: item.size.height,
               attrs: item.attrs,
               component: item.component,
+              data: item.data,
               ports: item.ports,
             });
           } else {
@@ -161,6 +177,9 @@ export default {
         console.log(layoutData, "fdfd");
         this.graph.fromJSON(layoutData);
       }
+    },
+    handleExportData() {
+      console.log(JSON.stringify(this.graph.toJSON()), "json");
     },
     // 初始化设置操作历史
     initHistory() {
@@ -196,13 +215,15 @@ export default {
     },
   },
   mounted() {
-    const data = {};
+    let data = {};
     this.graph = new Graph({
       container: document.getElementById("graph-container"),
       ...config,
     });
     const changePortsVisible = (visible) => {
-      const ports = document.getElementById("graph-container").querySelectorAll(".x6-port-body");
+      const ports = document
+        .getElementById("graph-container")
+        .querySelectorAll(".x6-port-body");
       for (let i = 0, len = ports.length; i < len; i = i + 1) {
         ports[i].style.visibility = visible ? "visible" : "hidden";
       }
@@ -216,10 +237,18 @@ export default {
     this.graph.on("node:mouseleave", () => {
       changePortsVisible(false);
     });
-    this.graph.on('node:added', (e) => {
-      console.log(e, e.node.position())
-    })
-    
+    this.graph.on("node:added", (e) => {
+      console.log(e, e.node.position());
+    });
+    Graph.registerVueComponent(
+      "table-component",
+      {
+        template: `<field-list></field-list>`,
+        components: { FieldList },
+      },
+      true
+    );
+    data = {"cells":[{"position":{"x":39,"y":18},"size":{"width":150,"height":200},"view":"vue-shape-view","attrs":{"body":{"stroke":"#000","strokeWidth":2}},"shape":"vue-shape","id":"1381d0ca-a628-4110-86f6-57013fcb7b1b","data":{"tableName":"holiday"},"component":"table-component","zIndex":1,"ports":{"items":[{"id":"port1","group":"in"},{"id":"port2","group":"out"}],"groups":{"in":{"position":"left","label":{"position":"left"},"attrs":{"circle":{"r":6,"magnet":true,"stroke":"#31d0c6","strokeWidth":2,"fill":"#fff"}}},"out":{"position":"right","label":{"position":"right"},"attrs":{"circle":{"r":6,"magnet":true,"stroke":"#31d0c6","strokeWidth":2,"fill":"#fff"}}}}}},{"position":{"x":34,"y":254},"size":{"width":150,"height":200},"view":"vue-shape-view","attrs":{"body":{"stroke":"#000","strokeWidth":2}},"shape":"vue-shape","id":"25b60e42-2f80-4108-b054-c79111da29c4","data":{"tableName":"Calendar"},"component":"table-component","zIndex":2,"ports":{"items":[{"id":"port1","group":"in"},{"id":"port2","group":"out"}],"groups":{"in":{"position":"left","label":{"position":"left"},"attrs":{"circle":{"r":6,"magnet":true,"stroke":"#31d0c6","strokeWidth":2,"fill":"#fff"}}},"out":{"position":"right","label":{"position":"right"},"attrs":{"circle":{"r":6,"magnet":true,"stroke":"#31d0c6","strokeWidth":2,"fill":"#fff"}}}}}},{"position":{"x":536,"y":254},"size":{"width":150,"height":200},"view":"vue-shape-view","attrs":{"body":{"stroke":"#000","strokeWidth":2}},"shape":"vue-shape","id":"db2f2a61-8af3-4479-b7f3-13697b0596e5","data":{"tableName":"Document"},"component":"table-component","zIndex":3,"ports":{"items":[{"id":"port1","group":"in"},{"id":"port2","group":"out"}],"groups":{"in":{"position":"left","label":{"position":"left"},"attrs":{"circle":{"r":6,"magnet":true,"stroke":"#31d0c6","strokeWidth":2,"fill":"#fff"}}},"out":{"position":"right","label":{"position":"right"},"attrs":{"circle":{"r":6,"magnet":true,"stroke":"#31d0c6","strokeWidth":2,"fill":"#fff"}}}}}},{"position":{"x":355,"y":334},"size":{"width":100,"height":40},"attrs":{"text":{"text":"关联"},"body":{"fill":"#efdbff","stroke":"#9254de"}},"shape":"rect","id":"1744cb7e-5529-4f57-9036-f78932065732","data":{"tableName":"join"},"zIndex":4,"ports":{"items":[{"id":"port1","group":"in"},{"id":"port2","group":"out"}],"groups":{"in":{"position":"left","label":{"position":"left"},"attrs":{"circle":{"r":6,"magnet":true,"stroke":"#31d0c6","strokeWidth":2,"fill":"#fff"}}},"out":{"position":"right","label":{"position":"right"},"attrs":{"circle":{"r":6,"magnet":true,"stroke":"#31d0c6","strokeWidth":2,"fill":"#fff"}}}}}},{"shape":"edge","attrs":{"line":{"stroke":"#1890ff"}},"id":"d3c60dd4-15b5-42eb-bac2-0681c27707d4","router":{"name":"er","args":{"offset":"center"}},"zIndex":12,"source":{"cell":"1381d0ca-a628-4110-86f6-57013fcb7b1b","port":"port2"},"target":{"cell":"1744cb7e-5529-4f57-9036-f78932065732","port":"port1"}},{"shape":"edge","attrs":{"line":{"stroke":"#1890ff"}},"id":"62f8cd26-d5cf-4125-b098-851ac9a9342a","router":{"name":"er","args":{"offset":"center"}},"zIndex":13,"source":{"cell":"25b60e42-2f80-4108-b054-c79111da29c4","port":"port2"},"target":{"cell":"1744cb7e-5529-4f57-9036-f78932065732","port":"port1"}},{"shape":"edge","attrs":{"line":{"stroke":"#1890ff"}},"id":"ec54fc84-de42-4966-9448-73c271f84eda","router":{"name":"er","args":{"offset":"center"}},"zIndex":14,"source":{"cell":"1744cb7e-5529-4f57-9036-f78932065732","port":"port2"},"target":{"cell":"db2f2a61-8af3-4479-b7f3-13697b0596e5","port":"port1"}},{"position":{"x":33,"y":490},"size":{"width":150,"height":200},"view":"vue-shape-view","attrs":{"body":{"stroke":"#000","strokeWidth":2}},"shape":"vue-shape","id":"8650208e-25b1-4a96-b24d-3b3f131ed742","data":{"tableName":"Document"},"component":"table-component","ports":{"items":[{"id":"port1","group":"in"},{"id":"port2","group":"out"}],"groups":{"in":{"position":"left","label":{"position":"left"},"attrs":{"circle":{"r":6,"magnet":true,"stroke":"#31d0c6","strokeWidth":2,"fill":"#fff"}}},"out":{"position":"right","label":{"position":"right"},"attrs":{"circle":{"r":6,"magnet":true,"stroke":"#31d0c6","strokeWidth":2,"fill":"#fff"}}}}},"zIndex":17},{"shape":"edge","attrs":{"line":{"stroke":"#1890ff"}},"id":"efceaf92-1e46-4e2e-a26f-c09b82c1a5df","router":{"name":"er","args":{"offset":"center"}},"source":{"cell":"8650208e-25b1-4a96-b24d-3b3f131ed742","port":"port2"},"target":{"cell":"1744cb7e-5529-4f57-9036-f78932065732","port":"port1"},"zIndex":18},{"position":{"x":788,"y":250},"size":{"width":150,"height":200},"view":"vue-shape-view","attrs":{"body":{"stroke":"#000","strokeWidth":2}},"shape":"vue-shape","id":"d01b923c-27ff-411e-90a7-c05b82d08450","data":{"tableName":"Document"},"component":"table-component","ports":{"items":[{"id":"port1","group":"in"},{"id":"port2","group":"out"}],"groups":{"in":{"position":"left","label":{"position":"left"},"attrs":{"circle":{"r":6,"magnet":true,"stroke":"#31d0c6","strokeWidth":2,"fill":"#fff"}}},"out":{"position":"right","label":{"position":"right"},"attrs":{"circle":{"r":6,"magnet":true,"stroke":"#31d0c6","strokeWidth":2,"fill":"#fff"}}}}},"zIndex":21},{"shape":"edge","attrs":{"line":{"stroke":"#1890ff"}},"id":"440085f3-b7aa-4aef-9331-2d48f0e02fa9","router":{"name":"er","args":{"offset":"center"}},"source":{"cell":"db2f2a61-8af3-4479-b7f3-13697b0596e5","port":"port2"},"target":{"cell":"d01b923c-27ff-411e-90a7-c05b82d08450","port":"port1"},"zIndex":22}]}
     this.graph.fromJSON(data);
     // 初始化操作历史
     this.initHistory();

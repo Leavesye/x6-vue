@@ -1,28 +1,9 @@
-import { Graph, Shape, Path } from "@antv/x6";
-Graph.registerConnector(
-  "curve",
-  (sourcePoint, targetPoint) => {
-    const path = new Path();
-    path.appendSegment(Path.createSegment("M", sourcePoint));
-    path.appendSegment(
-      Path.createSegment(
-        "C",
-        sourcePoint.x,
-        sourcePoint.y + 180,
-        targetPoint.x,
-        targetPoint.y - 180,
-        targetPoint.x,
-        targetPoint.y
-      )
-    );
-    return path.serialize();
-  },
-  true
-);
+import { Shape } from "@antv/x6";
+
 export const config = {
   width: "100%",
   height: "100%",
-  grid: true,
+  grid: 1,
   clipboard: {
     enabled: true,
   },
@@ -57,7 +38,6 @@ export const config = {
     },
     createEdge() {
       return new Shape.Edge({
-        // connector: { name: "curve" },
         router: {
             name: 'er',
             args: {
@@ -67,11 +47,11 @@ export const config = {
         attrs: {
           line: {
             stroke: "#1890ff",
-            strokeDasharray: 5,
+            // strokeDasharray: 5,
             targetMarker: "classic",
-            style: {
-              animation: "ant-line 30s infinite linear",
-            },
+            // style: {
+            //   animation: "ant-line 30s infinite linear",
+            // },
           },
         },
       });
